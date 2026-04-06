@@ -24,6 +24,8 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.text.format.Formatter;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -31,6 +33,10 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+
+import android.widget.PopupMenu;
+
+import me.zhanghai.android.fastscroll.FastScrollerBuilder;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -158,6 +164,7 @@ public class TorrentsDetailsFilesFragment extends Fragment
         super.onStop();
 
         disposables.clear();
+        viewModel.setFileSearchQuery(null);
     }
 
     @Override
@@ -210,6 +217,7 @@ public class TorrentsDetailsFilesFragment extends Fragment
         };
         binding.fileList.setItemAnimator(animator);
         binding.fileList.setAdapter(adapter);
+        new FastScrollerBuilder(binding.fileList).useMd2Style().build();
 
         selectionTracker = new SelectionTracker.Builder<>(
                 SELECTION_TRACKER_ID,
@@ -234,6 +242,24 @@ public class TorrentsDetailsFilesFragment extends Fragment
                     }
                 })
                 .build();
+
+        binding.searchBar.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                viewModel.setFileSearchQuery(s.toString());
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+
+        updateSortButtonIcon();
+        binding.sortButton.setOnClickListener(v -> showSortPopup(v));
 
         selectionTracker.addObserver(new SelectionTracker.SelectionObserver<>() {
             @Override
@@ -464,5 +490,32 @@ public class TorrentsDetailsFilesFragment extends Fragment
                 getString(R.string.unable_to_open_file),
                 Snackbar.LENGTH_SHORT
         ).show();
+    }
+
+    private void showSortPopup(View anchor) {
+        var popup = new PopupMenu(activity, anchor);
+        popup.inflate(R.menu.torrent_details_files_sort);
+        var current = viewModel.getFilesSortOrder();
+        var nameItem = popup.getMenu().findItem(R.id.sort_by_name_menu);
+        var progressItem = popup.getMenu().findItem(R.id.sort_by_progress_menu);
+        nameItem.setIcon(current == TorrentDetailsViewModel.FileSortOrder.ALPHABETICAL
+                ? R.drawable.ic_check_24px : 0);
+        progressItem.setIcon(current == TorrentDetailsViewModel.FileSortOrder.DOWNLOAD_PROGRESS
+                ? R.drawable.ic_check_24px : 0);
+        popup.setForceShowIcon(true);
+        popup.setOnMenuItemClickListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.sort_by_name_menu) {
+                viewModel.setFilesSortOrder(TorrentDetailsViewModel.FileSortOrder.ALPHABETICAL);
+            } else if (id == R.id.sort_by_progress_menu) {
+                viewModel.setFilesSortOrder(TorrentDetailsViewModel.FileSortOrder.DOWNLOAD_PROGRESS);
+            }
+            return true;
+        });
+        popup.show();
+    }
+
+    private void updateSortButtonIcon() {
+        binding.sortButton.setIconResource(R.drawable.ic_sort_24px);
     }
 }

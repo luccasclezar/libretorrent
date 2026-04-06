@@ -62,6 +62,8 @@ import org.proninyaroslav.libretorrent.core.system.SystemFacadeHelper;
 import org.proninyaroslav.libretorrent.core.utils.TorrentContentFileTreeUtils;
 import org.proninyaroslav.libretorrent.core.utils.Utils;
 
+import android.text.TextUtils;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -104,8 +106,15 @@ public class TorrentDetailsViewModel extends ViewModel {
     public TorrentContentFileTree fileTree;
     private TorrentContentFileTree[] treeLeaves;
     private final BehaviorSubject<List<TorrentContentFileTree>> children = BehaviorSubject.create();
+    public enum FileSortOrder {
+        ALPHABETICAL,
+        DOWNLOAD_PROGRESS
+    }
+
     /* Current directory */
     private TorrentContentFileTree curDir;
+    private String fileSearchQuery;
+    private FileSortOrder filesSortOrder = FileSortOrder.ALPHABETICAL;
 
     static final ViewModelInitializer<TorrentDetailsViewModel> initializer = new ViewModelInitializer<>(
             TorrentDetailsViewModel.class,
@@ -165,6 +174,20 @@ public class TorrentDetailsViewModel extends ViewModel {
 
     public io.reactivex.rxjava3.core.Observable<List<TorrentContentFileTree>> getDirChildren() {
         return children;
+    }
+
+    public void setFileSearchQuery(@androidx.annotation.Nullable String query) {
+        fileSearchQuery = query;
+        updateChildren();
+    }
+
+    public FileSortOrder getFilesSortOrder() {
+        return filesSortOrder;
+    }
+
+    public void setFilesSortOrder(@NonNull FileSortOrder order) {
+        filesSortOrder = order;
+        updateChildren();
     }
 
     public Flowable<TorrentInfo> observeTorrentInfo() {
@@ -231,18 +254,39 @@ public class TorrentDetailsViewModel extends ViewModel {
     }
 
     public List<TorrentContentFileTree> getChildren(TorrentContentFileTree node) {
-        List<TorrentContentFileTree> children = new ArrayList<>();
         if (node == null || node.isFile())
-            return children;
+            return new ArrayList<>();
 
-        /* Adding parent dir for navigation */
+        List<TorrentContentFileTree> items = new ArrayList<>();
+        if (TextUtils.isEmpty(fileSearchQuery)) {
+            items.addAll(curDir.getChildren());
+        } else {
+            String query = fileSearchQuery.toLowerCase().trim();
+            for (TorrentContentFileTree child : curDir.getChildren()) {
+                if (child.getName().toLowerCase().contains(query)) {
+                    items.add(child);
+                }
+            }
+        }
+
+        if (filesSortOrder == FileSortOrder.ALPHABETICAL) {
+            items.sort((a, b) -> a.getName().compareToIgnoreCase(b.getName()));
+        } else {
+            items.sort((a, b) -> {
+                double progressA = a.size() == 0 ? 0.0 : (double) a.getReceivedBytes() / a.size();
+                double progressB = b.size() == 0 ? 0.0 : (double) b.getReceivedBytes() / b.size();
+                return Double.compare(progressB, progressA);
+            });
+        }
+
+        List<TorrentContentFileTree> result = new ArrayList<>();
+        /* Adding parent dir for navigation (always first) */
         if (curDir != fileTree && curDir.getParent() != null)
-            children.add(0, new TorrentContentFileTree(TorrentContentFileTree.PARENT_DIR, 0L,
+            result.add(new TorrentContentFileTree(TorrentContentFileTree.PARENT_DIR, 0L,
                     FileNode.Type.DIR, curDir.getParent()));
+        result.addAll(items);
 
-        children.addAll(curDir.getChildren());
-
-        return children;
+        return result;
     }
 
     public void chooseDirectory(@NonNull String name) {

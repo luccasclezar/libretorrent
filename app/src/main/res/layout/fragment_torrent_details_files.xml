@@ -74,14 +74,55 @@
                     app:layout_constraintBottom_toBottomOf="parent" />
             </androidx.constraintlayout.widget.ConstraintLayout>
 
+            <LinearLayout
+                android:id="@+id/search_sort_bar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/status_string"
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="4dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:visibility="@{viewModel.info.metaInfo.fileCount == 0 ? View.GONE : View.VISIBLE}">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/search_bar_layout"
+                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="@string/search"
+                    app:endIconMode="clear_text"
+                    app:startIconDrawable="@drawable/ic_search_24px">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/search_bar"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="text|textNoSuggestions"
+                        android:imeOptions="actionSearch"
+                        android:singleLine="true" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/sort_button"
+                    style="@style/Widget.Material3.Button.IconButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:contentDescription="@string/drawer_sorting"
+                    app:icon="@drawable/ic_sort_24px" />
+            </LinearLayout>
+
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/file_list"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_below="@id/status_string"
+                android:layout_below="@id/search_sort_bar"
                 android:clipToPadding="false"
                 android:paddingVertical="8dp"
-                android:scrollbars="vertical"
+                android:scrollbars="none"
                 android:visibility="@{viewModel.info.metaInfo.fileCount == 0 ? View.GONE : View.VISIBLE}"
                 tools:itemCount="3"
                 tools:listitem="@layout/item_torrent_content_file" />
